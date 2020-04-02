@@ -3,12 +3,12 @@ import torch
 from torch.autograd import Variable
 
 
-def train(model, optimizer, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer, mixup=False, alpha=1.0):
+def train(model, teacher_model, optimizer, loss_fn, dataloader, use_gpu, epoch, writer, temp=1.0, gamma=1.0):
 
     model.train()
+    teacher_model.eval()
 
     losses = utils.AverageMeter()
-
     epoch_steps = len(dataloader)
 
     for i, (train_batch, label_batch) in enumerate(dataloader):
@@ -16,26 +16,17 @@ def train(model, optimizer, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer,
         if use_gpu:
             train_batch, label_batch = train_batch.cuda(), label_batch.cuda()
 
-        if mixup:
-            train_batch, label_batch_a, label_batch_b, lam = utils.mixup_data(
-                train_batch, label_batch, alpha, use_gpu)
-            train_batch, label_batch_a, label_batch_b = map(
-                Variable, (train_batch, label_batch_a, label_batch_b))
 
-            output_batch = model(train_batch)
-            loss = utils.mixup_loss_fn(
-                loss_fn, output_batch, label_batch_a, label_batch_b, lam)
-            losses.update(loss.item())
+        train_batch, label_batch = map(
+            Variable, (train_batch, label_batch))
 
-        else:
-            # To set grad to zero on these
-            train_batch, label_batch = map(
-                Variable, (train_batch, label_batch))
-            output_batch = model(train_batch)
+        output_batch = model(train_batch)
+        teacher_output_batch = teacher_model(train_batch)
+        teacher_output_batch = Variable(teacher_output_batch)
 
-            loss = loss_fn(output_batch, label_batch)
+        loss = loss_fn(output_batch, label_batch, teacher_output_batch, temp, gamma)
 
-            losses.update(loss.item())
+        losses.update(loss.item())
 
 
         optimizer.zero_grad()
@@ -45,9 +36,6 @@ def train(model, optimizer, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer,
         print(("Step: {}, Current Loss: {}, RunningLoss: {}").format(
             i, loss, losses.avg))
         writer.add_scalar('data/stepwise_training_loss', losses.val, niter)
-        if i > 0:
-            break
-
 
     writer.add_scalar('data/training_loss', losses.avg, epoch)
 
@@ -55,7 +43,7 @@ def train(model, optimizer, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer,
     return losses.avg
 
 
-def validate(model, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer):
+def validate(model, loss_fn, dataloader, use_gpu, epoch, writer):
 
     losses = utils.AverageMeter()
     model.eval()
@@ -76,8 +64,6 @@ def validate(model, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer):
             print(("Step: {}, Current Loss: {}, RunningLoss: {}").format(
                 i, loss, losses.avg))
 
-        if i > 0:
-            break
 
     writer.add_scalar('data/val_loss', losses.avg, epoch)
 

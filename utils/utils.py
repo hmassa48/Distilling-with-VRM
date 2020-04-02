@@ -2,8 +2,8 @@ import os
 import shutil
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
-
 
 
 class AverageMeter(object):
@@ -19,7 +19,7 @@ class AverageMeter(object):
 
     def update(self, val, n=1):
         self.vals.append(val)
-        self.val= val
+        self.val = val
         self.sum = sum(self.vals)
         self.count = len(self.vals)
         self.avg = self.sum/self.count
@@ -46,9 +46,8 @@ def accuracy(outputs, labels):
     """
     outputs = outputs.detach().numpy()
     outputs = np.argmax(outputs, axis=1)
-    return np.sum(outputs==labels)/float(outputs.shape[0])
+    return np.sum(outputs == labels)/float(outputs.shape[0])
 
-    
 
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
@@ -57,9 +56,9 @@ def get_lr(optimizer):
 
 def adjust_learning_rate(base_lr, optimizer, epoch, lr_decay=0.2):
     """Adjusts learning rate based on epoch of training
-    
+
     At 60th, 120th and 150th epoch, divide learning rate by 0.2
-    
+
     Args:
         base_lr: starting learning rate
         optimizer: optimizer used in training, SGD usually
@@ -82,9 +81,9 @@ def adjust_learning_rate(base_lr, optimizer, epoch, lr_decay=0.2):
 
 def save_checkpoint(state, is_best, dir_name, filename='checkpoint.pth.tar'):
     """Save model at end of each epoch and best model if found
-    
+
     Saves state of the model at end of each epoch and the best model
-    
+
     Args:
         state: dictionary with epoch, best loss and model information
         is_best: boolean if current model is the best till now
@@ -109,11 +108,11 @@ def load_checkpoint(model, resume_filename):
     """Load a model at the state for resume_filename
 
     Loads trained model parameters onto model
-    
+
     Args:
         model: empty model
         resume_filename: using resume path
-    
+
     Returns:
         start_epoch: Epoch at which model at resume_filename was last trained
         best_loss: Best Loss at start_epoch
@@ -141,6 +140,7 @@ def load_checkpoint(model, resume_filename):
             print(" => No checkpoint found at '{}'".format(resume_filename))
 
     return start_epoch, best_loss
+
 
 def mixup_data(x, y, alpha=1.0, use_gpu=True):
     """Create mixup data
@@ -176,16 +176,23 @@ def mixup_data(x, y, alpha=1.0, use_gpu=True):
 
 def mixup_loss_fn(loss_fn, pred, y_a, y_b, lam):
     """Loss function for mixup
-  
+
     Args:
         loss_fn: Original Loss function
         pred: Predictions
         y_a: Data point A label
         y_b: Data point B label
         lam: combination parameter
-    
+
     Returns:
         loss
     """
     return lam * loss_fn(pred, y_a) + (1 - lam) * loss_fn(pred, y_b)
 
+
+def kd_loss_fn(output, label, teacher_output, temp=1.0, gamma=1.0):
+
+    loss = nn.KLDivLoss()(F.log_softmax(output/temp, dim=1), F.softmax(teacher_output/temp, dim=1)) * (gamma * temp * temp) + \
+        F.cross_entropy(output, label) * (1 - gamma)
+
+    return loss
