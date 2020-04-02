@@ -13,7 +13,7 @@ _CLASSES = ('plane', 'car', 'bird', 'cat',
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-
+parser.add_argument('--seed', default=1)
 parser.add_argument('--gpu', default=False)
 parser.add_argument('--mode', default='teacher')
 parser.add_argument('--teacher_model', default='resnet50')
@@ -21,19 +21,22 @@ parser.add_argument('--student_model', default='resnet50')
 parser.add_argument('--augmentation', default=False)
 parser.add_argument('--resume', default='')
 parser.add_argument('--lr', default=0.1, type=float)
-parser.add_argument('--n_epochs', default=100)
+parser.add_argument('--n_epochs', default=250)
 parser.add_argument('--batch_size', default=128)
 parser.add_argument('--split_data', default=False)
 parser.add_argument('--name', default='teacher_training_no_augmentation')
+parser.add_argument('--mixup', default=False)
+parser.add_argument('--alpha', default=1.0)
 
 
 def main_teacher(args):
 
     print(
         ("Process {}, running on {}: starting {}").format(os.getpid(), os.name, time.asctime))
+    print("Training with Mixup: ", args.mixup)
     process_num = round(time.time())
     dir_name = args.name + '_' + str(process_num)
-    tb_path = "experiments/logs/%s/" % (dir_name)
+    tb_path = "distillation_experiments/logs/%s/" % (dir_name)
 
     writer = SummaryWriter(tb_path)
 
@@ -67,7 +70,7 @@ def main_teacher(args):
         print("Learning Rate : ", utils.get_lr(optimizer))
 
         train_loss = train.train(
-            model, optimizer, loss_fn, acc_fn, train_loader, use_gpu, epoch, writer)
+            model, optimizer, loss_fn, acc_fn, train_loader, use_gpu, epoch, writer, args.mixup, args.alpha)
         val_loss = train.validate(
             model, loss_fn, acc_fn, test_loader, use_gpu, epoch, writer)
 
@@ -104,6 +107,8 @@ def main_kd(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    if args.seed:
+        torch.manual_seed(args.seed)
 
     if args.mode == 'teacher':
         main_teacher(args)
