@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from sklearn.metrics import precision_recall_fscore_support
 
 
 class AverageMeter(object):
@@ -45,8 +46,20 @@ def accuracy(outputs, labels):
     Returns: (float) accuracy in [0,1]
     """
     outputs = outputs.detach().numpy()
+    labels = labels.detach().numpy()
     outputs = np.argmax(outputs, axis=1)
-    return np.sum(outputs == labels)/float(outputs.shape[0])
+
+    return np.sum(outputs == labels)/float(outputs.size)
+
+
+def find_metrics(outputs, labels):
+    outputs = outputs.detach().numpy()
+    outputs = np.argmax(outputs, axis=1)
+    labels = labels.detach().numpy()
+
+    prec, rec, f_score, _ = precision_recall_fscore_support(labels, outputs, average='weighted')
+    accuracy = np.sum(outputs == labels) / float(outputs.size)
+    return accuracy, prec, rec
 
 
 def get_lr(optimizer):

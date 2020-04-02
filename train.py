@@ -8,7 +8,7 @@ def train(model, optimizer, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer,
     model.train()
 
     losses = utils.AverageMeter()
-
+    accuracies = utils.AverageMeter()
     epoch_steps = len(dataloader)
 
     for i, (train_batch, label_batch) in enumerate(dataloader):
@@ -26,6 +26,7 @@ def train(model, optimizer, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer,
             loss = utils.mixup_loss_fn(
                 loss_fn, output_batch, label_batch_a, label_batch_b, lam)
             losses.update(loss.item())
+            writer.add_scalar('data/stepwise_lambda', lam, niter)
 
         else:
             # To set grad to zero on these
@@ -34,8 +35,11 @@ def train(model, optimizer, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer,
             output_batch = model(train_batch)
 
             loss = loss_fn(output_batch, label_batch)
+            acc, _, _ = utils.find_metrics(output_batch, label_batch)
 
             losses.update(loss.item())
+            accuracies.update(acc)
+            writer.add_scalar('data/stepwise_training_accuracy', accuracies.val, niter)
 
 
         optimizer.zero_grad()
@@ -45,11 +49,11 @@ def train(model, optimizer, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer,
         print(("Step: {}, Current Loss: {}, RunningLoss: {}").format(
             i, loss, losses.avg))
         writer.add_scalar('data/stepwise_training_loss', losses.val, niter)
-        if i > 0:
-            break
 
 
     writer.add_scalar('data/training_loss', losses.avg, epoch)
+    if not mixup:
+        writer.add_scalar('data/training_accuracy', accuracies.avg, epoch)
 
 
     return losses.avg
@@ -58,6 +62,10 @@ def train(model, optimizer, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer,
 def validate(model, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer):
 
     losses = utils.AverageMeter()
+    accuracies = utils.AverageMeter()
+    precisions = utils.AverageMeter()
+    recalls = utils.AverageMeter()
+
     model.eval()
 
     for i, (train_batch, label_batch) in enumerate(dataloader):
@@ -71,14 +79,21 @@ def validate(model, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer):
 
             loss = loss_fn(output_batch, label_batch)
 
+            acc, prec, rec = utils.find_metrics(output_batch, label_batch)
+
             losses.update(loss.item())
+            accuracies.update(acc)
+            precisions.update(prec)
+            recalls.update(rec)
 
             print(("Step: {}, Current Loss: {}, RunningLoss: {}").format(
                 i, loss, losses.avg))
 
-        if i > 0:
-            break
 
     writer.add_scalar('data/val_loss', losses.avg, epoch)
+    writer.add_scalar('data/val_accuracy', accuracies.avg, epoch)
+    writer.add_scalar('data/val_precision', precisions.avg, epoch)
+    writer.add_scalar('data/val_recall', recalls.avg, epoch)
+
 
     return losses.avg
