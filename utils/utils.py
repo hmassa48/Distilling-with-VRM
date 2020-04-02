@@ -91,7 +91,7 @@ def save_checkpoint(state, is_best, dir_name, filename='checkpoint.pth.tar'):
         dir_name: directory for model paths for this model
         filename: epoch filename (default: {'checkpoint.pth.tar'})
     """
-    directory = "experiments/runs/%s/" % (dir_name)
+    directory = "distillation_experiments/runs/%s/" % (dir_name)
 
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -141,3 +141,51 @@ def load_checkpoint(model, resume_filename):
             print(" => No checkpoint found at '{}'".format(resume_filename))
 
     return start_epoch, best_loss
+
+def mixup_data(x, y, alpha=1.0, use_gpu=True):
+    """Create mixup data
+
+    Generates convex combination of datapoints
+
+    Args:
+        x: batch of images
+        y: batch of labels
+        alpha: parameter controlling lambda (default: {1.0})
+        use_gpu: if using gpu  (default: {True})
+
+    Returns:
+        mixed_up: convex sum of data-points
+        y_a: original labels
+        y_b: other labels
+        lam: combination parameter
+    """
+    if alpha > 0:
+        lam = np.random.beta(alpha, alpha)
+    else:
+        lam = 1
+
+    batch_size = x.size()[0]
+    index = torch.randperm(batch_size)
+    if use_gpu:
+        index = index.cuda()
+
+    mixed_x = lam * x + (1 - lam) * x[index, :]
+    y_a, y_b = y, y[index]
+    return mixed_x, y_a, y_b, lam
+
+
+def mixup_loss_fn(loss_fn, pred, y_a, y_b, lam):
+    """Loss function for mixup
+  
+    Args:
+        loss_fn: Original Loss function
+        pred: Predictions
+        y_a: Data point A label
+        y_b: Data point B label
+        lam: combination parameter
+    
+    Returns:
+        loss
+    """
+    return lam * loss_fn(pred, y_a) + (1 - lam) * loss_fn(pred, y_b)
+
