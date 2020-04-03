@@ -6,7 +6,7 @@ from utils import utils, dataloader, model_fetch
 import train
 import train_kd
 from tensorboardX import SummaryWriter
-
+import torch.backends.cudnn as cudnn
 
 _CLASSES = ('plane', 'car', 'bird', 'cat',
             'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -17,20 +17,20 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--seed', default=1)
 parser.add_argument('--gpu', default=False)
 parser.add_argument('--mode', default='teacher')
-parser.add_argument('--teacher_model', default='preact_resnet50')
-parser.add_argument('--student_model', default='preact_resnet18')
-parser.add_argument('--augmentation', default=False)
+parser.add_argument('--teacher_model', default='resnet18')
+parser.add_argument('--student_model', default='resnet18')
+parser.add_argument('--augmentation', default=True)
 parser.add_argument('--resume', default='')
 parser.add_argument('--lr', default=0.1, type=float)
 parser.add_argument('--n_epochs', default=250)
 parser.add_argument('--batch_size', default=128)
-parser.add_argument('--name', default='teacher_training_no_augmentation')
+parser.add_argument('--name', default='resnet18_augmented')
 parser.add_argument('--mixup', default=False)
 parser.add_argument('--alpha', default=1.0)
 parser.add_argument('--teacher_path', default='')
 parser.add_argument('--temperature', default=1.0)
 parser.add_argument('--gamma', default=1.0)
-
+parser.add_argument('--decay', default=1e-4)
 
 def main_teacher(args):
 
@@ -51,6 +51,7 @@ def main_teacher(args):
     model = model_fetch.fetch_teacher(args.teacher_model)
 
     if use_gpu:
+        cudnn.benchmark = True
         model = model.cuda()
 
     train_loader = dataloader.fetch_dataloader(
@@ -60,7 +61,7 @@ def main_teacher(args):
 
     params = [p for p in model.parameters() if p.requires_grad]
 
-    optimizer = torch.optim.SGD(params, lr=args.lr, momentum=0.99)
+    optimizer = torch.optim.SGD(params, lr=args.lr, momentum=0.9, weight_decay=args.decay)
     loss_fn = utils.loss_fn
     acc_fn = utils.accuracy
 
