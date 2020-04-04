@@ -1,9 +1,11 @@
 # Knowledge Distillation with VRM
 
-First, replicate the conda environment using the spec-file
+First, replicate the conda environment using the spec-file and activate it.
 
 ```bash
 conda install --name ml --file spec-file.txt
+
+conda activate ml
 ```
 
 ### For Baseline Teacher Training (Default Model: ResNet18)
