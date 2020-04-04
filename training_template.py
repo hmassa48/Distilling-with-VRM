@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('--seed', default=1)
-parser.add_argument('--gpu', default=False)
+parser.add_argument('--gpu', default=True)
 parser.add_argument('--mode', default='teacher')
 parser.add_argument('--teacher_model', default='resnet18')
 parser.add_argument('--student_model', default='resnet18')
