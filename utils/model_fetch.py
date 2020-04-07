@@ -1,5 +1,6 @@
 from models import resnet_model
 from models import preact_resnet_model
+from models import alexnet
 
 _MODEL_DICT = {
     'resnet18': resnet_model.ResNet18(),
@@ -12,6 +13,7 @@ _MODEL_DICT = {
     'preact_resnet50': preact_resnet_model.PreActResNet50(),
     'preact_resnet101': preact_resnet_model.PreActResNet101(),
     'preact_resnet152': preact_resnet_model.PreActResNet152(),
+    'alexnet': alexnet.AlexNet()
 }
 
 
