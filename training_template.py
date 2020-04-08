@@ -2,11 +2,12 @@ import os
 import time
 import torch
 import argparse
-from utils import utils, dataloader, model_fetch
+from utils import utils, dataloader, model_fetch, cutout
 import train
 import train_kd
 from tensorboardX import SummaryWriter
 import torch.backends.cudnn as cudnn
+import torchvision.transforms as transforms
 
 _CLASSES = ('plane', 'car', 'bird', 'cat',
             'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -14,23 +15,28 @@ _CLASSES = ('plane', 'car', 'bird', 'cat',
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser.add_argument('--seed', default=1)
+parser.add_argument('--seed', default=2)
 parser.add_argument('--gpu', default=True)
 parser.add_argument('--mode', default='teacher')
-parser.add_argument('--teacher_model', default='resnet18')
+parser.add_argument('--teacher_model', default='lenet')
 parser.add_argument('--student_model', default='resnet18')
-parser.add_argument('--augmentation', default=True)
+parser.add_argument('--augmentation', default=False)
 parser.add_argument('--resume', default='')
+    # '--resume', default='/srv/home/deepandas11/distillation_experiments/runs/resnet18_mixup_retrained_1586249496/checkpoint.pth.tar')
 parser.add_argument('--lr', default=0.1, type=float)
 parser.add_argument('--n_epochs', default=250)
 parser.add_argument('--batch_size', default=128)
-parser.add_argument('--name', default='resnet18_augmented')
+parser.add_argument('--name', default='resnet18_mixup_retrained')
 parser.add_argument('--mixup', default=False)
 parser.add_argument('--alpha', default=1.0)
 parser.add_argument('--teacher_path', default='')
 parser.add_argument('--temperature', default=1.0)
 parser.add_argument('--gamma', default=1.0)
 parser.add_argument('--decay', default=1e-4)
+parser.add_argument('--cutout', default=False)
+parser.add_argument('--n_holes', default=1)
+parser.add_argument('--length_holes', default=16)
+
 
 def main_teacher(args):
 
@@ -54,14 +60,32 @@ def main_teacher(args):
         cudnn.benchmark = True
         model = model.cuda()
 
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
+    train_transform = val_transform = transform
+
+    if args.augmentation:
+        train_transform = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),  # randomly flip image horizontally
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
+
+    if args.cutout:
+        train_transform.transforms.append(cutout.Cutout(n_holes=args.n_holes, length=args.length_holes))
+
+
     train_loader = dataloader.fetch_dataloader(
-        "train", args.augmentation, args.batch_size)
+        "train", train_transform, args.batch_size)
     test_loader = dataloader.fetch_dataloader(
-        "test", args.augmentation, args.batch_size)
+        "test", val_transform, args.batch_size)
 
     params = [p for p in model.parameters() if p.requires_grad]
 
-    optimizer = torch.optim.SGD(params, lr=args.lr, momentum=0.9, weight_decay=args.decay)
+    optimizer = torch.optim.SGD(
+        params, lr=args.lr, momentum=0.9, weight_decay=args.decay)
     loss_fn = utils.loss_fn
     acc_fn = utils.accuracy
 
