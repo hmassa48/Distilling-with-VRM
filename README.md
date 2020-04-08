@@ -24,5 +24,11 @@ python training_template.py --mode teacher --augmentation True --name resnet18_a
 
 ```
 python training_template.py --mode teacher --augmentation False --mixup True --name resnet18_mixup
+
+```
+
+### For Cutout Training
+```
+python training_template.py --mode teacher --cutout True --name cutout
 ```
 
