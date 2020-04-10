@@ -43,3 +43,11 @@ python training_template.py --mode teacher --cutout True --name cutout
 python training_template.py --mode teacher --cutmix True --name cutmix --cutmix_prob 0.5 --cutmix_beta 1.0
 ```
 
+
+## Step 3: Train Student Models
+
+Use dark knowledge from teacher models trained in Step 2.
+
+## Step 4: Analyse generalization performance
+
+
