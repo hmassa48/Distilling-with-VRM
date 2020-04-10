@@ -18,15 +18,14 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--seed', default=2)
 parser.add_argument('--gpu', default=True)
 parser.add_argument('--mode', default='teacher')
-parser.add_argument('--teacher_model', default='lenet')
+parser.add_argument('--teacher_model', default='resnet18')
 parser.add_argument('--student_model', default='resnet18')
 parser.add_argument('--augmentation', default=False)
 parser.add_argument('--resume', default='')
-    # '--resume', default='/srv/home/deepandas11/distillation_experiments/runs/resnet18_mixup_retrained_1586249496/checkpoint.pth.tar')
 parser.add_argument('--lr', default=0.1, type=float)
 parser.add_argument('--n_epochs', default=250)
 parser.add_argument('--batch_size', default=128)
-parser.add_argument('--name', default='resnet18_mixup_retrained')
+parser.add_argument('--name', default='resnet18_cutmix')
 parser.add_argument('--mixup', default=False)
 parser.add_argument('--alpha', default=1.0)
 parser.add_argument('--teacher_path', default='')
@@ -36,13 +35,21 @@ parser.add_argument('--decay', default=1e-4)
 parser.add_argument('--cutout', default=False)
 parser.add_argument('--n_holes', default=1)
 parser.add_argument('--length_holes', default=16)
+parser.add_argument('--cutmix', default=True)
+parser.add_argument('--cutmix_beta', default=1.0)
+parser.add_argument('--cutmix_prob', default=0.5)
 
 
 def main_teacher(args):
 
     print(
         ("Process {}, running on {}: starting {}").format(os.getpid(), os.name, time.asctime))
+    
+    print("Training with Augmentation: ", args.augmentation)
+    print("Training with Cutout: ", args.cutout)
     print("Training with Mixup: ", args.mixup)
+    print("Training with CutMix: ", args.cutmix)
+
     process_num = round(time.time())
     dir_name = args.name + '_' + str(process_num)
     tb_path = "distillation_experiments/logs/%s/" % (dir_name)
@@ -60,7 +67,6 @@ def main_teacher(args):
         cudnn.benchmark = True
         model = model.cuda()
 
-
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
@@ -74,8 +80,8 @@ def main_teacher(args):
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
 
     if args.cutout:
-        train_transform.transforms.append(cutout.Cutout(n_holes=args.n_holes, length=args.length_holes))
-
+        train_transform.transforms.append(cutout.Cutout(
+            n_holes=args.n_holes, length=args.length_holes))
 
     train_loader = dataloader.fetch_dataloader(
         "train", train_transform, args.batch_size)
@@ -98,7 +104,11 @@ def main_teacher(args):
         print("Learning Rate : ", utils.get_lr(optimizer))
 
         train_loss = train.train(
-            model, optimizer, loss_fn, acc_fn, train_loader, use_gpu, epoch, writer, args.mixup, args.alpha)
+            model, optimizer, loss_fn, acc_fn, train_loader, use_gpu,
+            epoch, writer, args.mixup, args.alpha, args.cutmix,
+            args.cutmix_prob, args.cutmix_beta
+        )
+
         val_loss = train.validate(
             model, loss_fn, acc_fn, test_loader, use_gpu, epoch, writer)
 
