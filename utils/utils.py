@@ -57,7 +57,8 @@ def find_metrics(outputs, labels):
     outputs = np.argmax(outputs, axis=1)
     labels = labels.detach().numpy()
 
-    prec, rec, f_score, _ = precision_recall_fscore_support(labels, outputs, average='weighted')
+    prec, rec, f_score, _ = precision_recall_fscore_support(
+        labels, outputs, average='weighted')
     accuracy = np.sum(outputs == labels) / float(outputs.size)
     return accuracy, prec, rec
 
@@ -187,7 +188,6 @@ def mixup_data(x, y, alpha=1.0, use_gpu=True):
     return mixed_x, y_a, y_b, lam
 
 
-
 def cutmix_data(x, y, beta=1.0, cutmix_prob=0.5, use_gpu=True):
     if beta > 0 and cutmix_prob < 1.0:
         lam = np.random.beta(beta, beta)
@@ -201,14 +201,14 @@ def cutmix_data(x, y, beta=1.0, cutmix_prob=0.5, use_gpu=True):
 
         bbx1, bby1, bbx2, bby2 = rand_bbox(x.size(), lam)
         x[:, :, bbx1:bbx2, bby1:bby2] = x[index, :, bbx1:bbx2, bby1:bby2]
-        lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (x.size()[-1] * x.size()[-2]))
+        lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) /
+                   (x.size()[-1] * x.size()[-2]))
 
         return x, y_a, y_b, lam
 
     else:
         lam = 1
         return x, y, y, lam
-
 
 
 def mixed_loss_fn(loss_fn, pred, y_a, y_b, lam):
@@ -229,7 +229,8 @@ def mixed_loss_fn(loss_fn, pred, y_a, y_b, lam):
 
 def kd_loss_fn(output, label, teacher_output, temp=1.0, gamma=1.0):
 
-    loss = nn.KLDivLoss()(F.log_softmax(output/temp, dim=1), F.softmax(teacher_output/temp, dim=1)) * (gamma * temp * temp) + \
+    loss = nn.KLDivLoss()(F.log_softmax(output/temp, dim=1),
+                          F.softmax(teacher_output/temp, dim=1)) * (gamma * temp * temp) + \
         F.cross_entropy(output, label) * (1 - gamma)
 
     return loss
@@ -252,4 +253,3 @@ def rand_bbox(size, lam):
     bby2 = np.clip(cy + cut_h // 2, 0, H)
 
     return bbx1, bby1, bbx2, bby2
-

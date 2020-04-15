@@ -9,7 +9,9 @@ def train(model, teacher_model, optimizer, loss_fn, dataloader, use_gpu, epoch, 
     teacher_model.eval()
 
     losses = utils.AverageMeter()
+    accuracies = utils.AverageMeter()
     epoch_steps = len(dataloader)
+    teacher_model.eval()
 
     for i, (train_batch, label_batch) in enumerate(dataloader):
         niter = (epoch - 1)*epoch_steps + i
@@ -25,8 +27,10 @@ def train(model, teacher_model, optimizer, loss_fn, dataloader, use_gpu, epoch, 
         teacher_output_batch = Variable(teacher_output_batch)
 
         loss = loss_fn(output_batch, label_batch, teacher_output_batch, temp, gamma)
+        acc, _, _ = utils.find_metrics(output_batch, label_batch)
 
         losses.update(loss.item())
+        accuracies.update(acc)
 
 
         optimizer.zero_grad()
@@ -36,8 +40,11 @@ def train(model, teacher_model, optimizer, loss_fn, dataloader, use_gpu, epoch, 
         print(("Step: {}, Current Loss: {}, RunningLoss: {}").format(
             i, loss, losses.avg))
         writer.add_scalar('data/stepwise_training_loss', losses.val, niter)
+        writer.add_scalar(
+                'data/stepwise_training_accuracy', accuracies.val, niter)
 
     writer.add_scalar('data/training_loss', losses.avg, epoch)
+    writer.add_scalar('data/training_accuracy', accuracies.avg, epoch)
 
 
     return losses.avg
@@ -45,7 +52,12 @@ def train(model, teacher_model, optimizer, loss_fn, dataloader, use_gpu, epoch, 
 
 def validate(model, loss_fn, dataloader, use_gpu, epoch, writer):
 
+    
     losses = utils.AverageMeter()
+    accuracies = utils.AverageMeter()
+    precisions = utils.AverageMeter()
+    recalls = utils.AverageMeter()
+
     model.eval()
 
     for i, (train_batch, label_batch) in enumerate(dataloader):
@@ -58,13 +70,20 @@ def validate(model, loss_fn, dataloader, use_gpu, epoch, writer):
             output_batch = model(train_batch)
 
             loss = loss_fn(output_batch, label_batch)
+            acc, prec, rec = utils.find_metrics(output_batch, label_batch)
 
             losses.update(loss.item())
+            accuracies.update(acc)
+            precisions.update(prec)
+            recalls.update(rec)
 
             print(("Step: {}, Current Loss: {}, RunningLoss: {}").format(
                 i, loss, losses.avg))
 
 
     writer.add_scalar('data/val_loss', losses.avg, epoch)
+    writer.add_scalar('data/val_accuracy', accuracies.avg, epoch)
+    writer.add_scalar('data/val_precision', precisions.avg, epoch)
+    writer.add_scalar('data/val_recall', recalls.avg, epoch)
 
     return losses.avg
