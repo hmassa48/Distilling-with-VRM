@@ -72,7 +72,7 @@ def get_lr(optimizer):
         return param_group['lr']
 
 
-def adjust_learning_rate(base_lr, optimizer, epoch, lr_decay=0.2):
+def adjust_learning_rate(base_lr, optimizer, epoch, lr_decay=0.1):
     """Adjusts learning rate based on epoch of training
 
     At 60th, 80th and 120th epoch, divide learning rate by 0.2
