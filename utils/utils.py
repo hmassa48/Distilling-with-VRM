@@ -52,7 +52,11 @@ def accuracy(outputs, labels):
     return np.sum(outputs == labels)/float(outputs.size)
 
 
-def find_metrics(outputs, labels):
+def find_metrics(outputs, labels, use_gpu):
+    if use_gpu:
+        outputs = outputs.cpu()
+        labels = labels.cpu()
+        
     outputs = outputs.detach().numpy()
     outputs = np.argmax(outputs, axis=1)
     labels = labels.detach().numpy()
@@ -82,11 +86,11 @@ def adjust_learning_rate(base_lr, optimizer, epoch, lr_decay=0.2):
     if epoch < 60:
         lr = base_lr
     elif 60 <= epoch < 80:
-        lr = base_lr * 0.2
+        lr = base_lr * lr_decay
     elif 80 <= epoch < 120:
-        lr = base_lr * (0.2)**2
+        lr = base_lr * (lr_decay)**2
     else:
-        lr = base_lr * (0.2)**3
+        lr = base_lr * (lr_decay)**3
 
     # lr = base_lr * (0.1 ** (epoch // lr_decay))
     for param_group in optimizer.param_groups:
