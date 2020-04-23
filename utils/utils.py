@@ -51,20 +51,27 @@ def accuracy(outputs, labels):
 
     return np.sum(outputs == labels)/float(outputs.size)
 
+def check_type(outputs, labels, use_gpu):
+    if type(outputs) is not np.ndarray:
+        if use_gpu:
+            outputs = outputs.cpu()
+        outputs = outputs.detach().numpy()
+
+    if type(labels) is not np.ndarray:
+        if use_gpu:
+            labels = labels.cpu()
+        labels = labels.detach().numpy()
+
+    outputs = np.argmax(outputs, axis=1)
+    return outputs, labels
+
 
 def find_metrics(outputs, labels, use_gpu):
-    if use_gpu:
-        outputs = outputs.cpu()
-        labels = labels.cpu()
-        
-    outputs = outputs.detach().numpy()
-    outputs = np.argmax(outputs, axis=1)
-    labels = labels.detach().numpy()
-
+    outputs, labels = check_type(outputs, labels, use_gpu)
     prec, rec, f_score, _ = precision_recall_fscore_support(
         labels, outputs, average='weighted')
     accuracy = np.sum(outputs == labels) / float(outputs.size)
-    return accuracy, prec, rec
+    return accuracy, prec, rec, f_score
 
 
 def get_lr(optimizer):
@@ -141,7 +148,10 @@ def load_checkpoint(model, resume_filename):
     if resume_filename:
         if os.path.isfile(resume_filename):
             print("=> Loading Checkpoint '{}'".format(resume_filename))
-            checkpoint = torch.load(resume_filename)
+            if not torch.cuda.is_available():
+                checkpoint = torch.load(resume_filename, map_location=torch.device('cpu'))
+            else:
+                checkpoint = torch.load(resume_filename)
             start_epoch = checkpoint['epoch']
             best_loss = checkpoint['best_loss']
             model.load_state_dict(checkpoint['model'])
