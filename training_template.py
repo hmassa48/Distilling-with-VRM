@@ -8,6 +8,7 @@ import train_kd
 from tensorboardX import SummaryWriter
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
+from pprint import pprint
 
 _CLASSES = ('plane', 'car', 'bird', 'cat',
             'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -15,36 +16,45 @@ _CLASSES = ('plane', 'car', 'bird', 'cat',
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+# General Arguments
 parser.add_argument('--seed', default=2)
 parser.add_argument('--gpu', default=True)
 parser.add_argument('--mode', default='teacher')
-parser.add_argument('--teacher_model', default='resnet18')
-parser.add_argument('--student_model', default='resnet18')
-parser.add_argument('--augmentation', default=False)
-parser.add_argument('--resume', default='')
-parser.add_argument('--lr', default=0.1, type=float)
+parser.add_argument('--lr', default=0.0001, type=float)
+parser.add_argument('--lr_decay', default=0.1)
 parser.add_argument('--n_epochs', default=250)
 parser.add_argument('--batch_size', default=128)
-parser.add_argument('--name', default='resnet18_cutmix')
+
+# Model arguments
+parser.add_argument('--teacher_model', default='resnet18')
+parser.add_argument('--student_model', default='lenet')
+parser.add_argument('--resume', default='')
+parser.add_argument('--teacher_path', default='')
+
+# VRM arguments
+parser.add_argument('--augmentation', default=False)
 parser.add_argument('--mixup', default=False)
 parser.add_argument('--alpha', default=1.0)
-parser.add_argument('--teacher_path', default='')
-parser.add_argument('--temperature', default=1.0)
-parser.add_argument('--gamma', default=1.0)
 parser.add_argument('--decay', default=1e-4)
 parser.add_argument('--cutout', default=False)
 parser.add_argument('--n_holes', default=1)
 parser.add_argument('--length_holes', default=16)
-parser.add_argument('--cutmix', default=True)
+parser.add_argument('--cutmix', default=False)
 parser.add_argument('--cutmix_beta', default=1.0)
 parser.add_argument('--cutmix_prob', default=0.5)
 
+# Distillation arguments
+parser.add_argument('--temperature', default=5.0)
+parser.add_argument('--gamma', default=0.5)
+
+# Name argument
+parser.add_argument('--name', default='resnet_baseline')
 
 def main_teacher(args):
 
     print(
         ("Process {}, running on {}: starting {}").format(os.getpid(), os.name, time.asctime))
-    
+
     print("Training with Augmentation: ", args.augmentation)
     print("Training with Cutout: ", args.cutout)
     print("Training with Mixup: ", args.mixup)
@@ -53,6 +63,7 @@ def main_teacher(args):
     process_num = round(time.time())
     dir_name = args.name + '_' + str(process_num)
     tb_path = "distillation_experiments/logs/%s/" % (dir_name)
+    pprint(args.__dict__)
 
     writer = SummaryWriter(tb_path)
 
@@ -99,7 +110,7 @@ def main_teacher(args):
     epoch = start_epoch
     while epoch <= int(args.n_epochs):
         print("="*50)
-        utils.adjust_learning_rate(args.lr, optimizer, epoch)
+        utils.adjust_learning_rate(args.lr, optimizer, epoch, args.lr_decay)
         print(("Epoch {} Training Starting").format(epoch))
         print("Learning Rate : ", utils.get_lr(optimizer))
 
@@ -143,12 +154,22 @@ def main_kd(args):
 
     print(
         ("Process {}, running on {}: starting {}").format(os.getpid(), os.name, time.asctime))
-    print("Training with Mixup: ", args.mixup)
+
+    print("Student Training Underway!")
+    print("Temperature: ", args.temperature)
+    print("Relative Loss Weights: ", args.gamma)
     process_num = round(time.time())
-    dir_name = args.name + '_' + str(process_num)
+
+    model_name = args.name + '_temp' + \
+        str(args.temperature) + '_gamma' + str(args.gamma)
+    dir_name = model_name + '_' + str(process_num)
+
     tb_path = "distillation_experiments/logs/%s/" % (dir_name)
 
     writer = SummaryWriter(tb_path)
+
+    print("Arguments for model: ", model_name)
+    pprint(args.__dict__)
 
     use_gpu = args.gpu
     if not torch.cuda.is_available():
@@ -159,13 +180,31 @@ def main_kd(args):
     student_model = model_fetch.fetch_student(args.student_model)
 
     if use_gpu:
+        cudnn.benchmark = True
         teacher_model = teacher_model.cuda()
         student_model = student_model.cuda()
 
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
+    train_transform = val_transform = transform
+
+    if False:
+        if args.augmentation:
+            train_transform = transforms.Compose([
+                transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),  # randomly flip image horizontally
+                transforms.ToTensor(),
+                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
+
+        if args.cutout:
+            train_transform.transforms.append(cutout.Cutout(
+                n_holes=args.n_holes, length=args.length_holes))
+
     train_loader = dataloader.fetch_dataloader(
-        "train", args.augmentation, args.batch_size)
+        "train", train_transform, args.batch_size)
     test_loader = dataloader.fetch_dataloader(
-        "test", args.augmentation, args.batch_size)
+        "test", val_transform, args.batch_size)
 
     params = [p for p in student_model.parameters() if p.requires_grad]
 
@@ -178,15 +217,20 @@ def main_kd(args):
         teacher_model, args.teacher_path)
     start_epoch, best_loss = utils.load_checkpoint(student_model, args.resume)
 
+    print("Models Loaded!")
+    print(student_model)
+    
     epoch = start_epoch
     while epoch <= int(args.n_epochs):
         print("="*50)
-        utils.adjust_learning_rate(args.lr, optimizer, epoch)
+        utils.adjust_learning_rate(args.lr, optimizer, epoch, args.lr_decay)
         print(("Epoch {} Training Starting").format(epoch))
         print("Learning Rate : ", utils.get_lr(optimizer))
 
         train_loss = train_kd.train(
-            student_model, teacher_model, optimizer, loss_fn, train_loader, use_gpu, epoch, writer, args.temperature, args.gamma)
+            student_model, teacher_model, optimizer, loss_fn, train_loader,
+            use_gpu, epoch, writer, args.temperature, args.gamma
+        )
         val_loss = train_kd.validate(
             student_model, simple_loss_fn, test_loader, use_gpu, epoch, writer)
 
