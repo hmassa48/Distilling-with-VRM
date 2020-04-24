@@ -150,11 +150,14 @@ def load_checkpoint(model, resume_filename):
             print("=> Loading Checkpoint '{}'".format(resume_filename))
             if not torch.cuda.is_available():
                 checkpoint = torch.load(resume_filename, map_location=torch.device('cpu'))
+                start_epoch = checkpoint['epoch']
+                best_loss = checkpoint['best_loss']
+                model.load_state_dict(checkpoint['model'])
             else:
                 checkpoint = torch.load(resume_filename)
-            start_epoch = checkpoint['epoch']
-            best_loss = checkpoint['best_loss']
-            model.load_state_dict(checkpoint['model'])
+                device = torch.device("cuda")
+                model.to(device)
+            
 
             print("========================================================")
 
