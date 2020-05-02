@@ -14,35 +14,7 @@ conda activate ml
 
 ## Step 2: Train Teacher Models
 
-### For Baseline Teacher Training (Default Model: ResNet18)
-
-```
-python training_template.py --mode teacher --augmentation False --name resnet18_baseline
-```
-
-### For Teacher Training with Augmentation
-
-```
-python training_template.py --mode teacher --augmentation True --name resnet18_augmented
-```
-
-### For Mixup Training
-
-```
-python training_template.py --mode teacher --augmentation False --mixup True --name resnet18_mixup
-```
-
-### For Cutout Training
-```
-python training_template.py --mode teacher --cutout True --name cutout
-```
-
-
-### For CutMix Training
-```
-python training_template.py --mode teacher --cutmix True --name cutmix --cutmix_prob 0.5 --cutmix_beta 1.0
-```
-
+Train a set of techer models with these VRM techniques.
 
 ## Step 3: Train Student Models
 
@@ -50,4 +22,8 @@ Use dark knowledge from teacher models trained in Step 2.
 
 ## Step 4: Analyse generalization performance
 
+Use different datasets and performance metrics to analyse generalization performance of the different student models. To measure generalization, we can evaluate the models on the unseen CIFAR test set. In addition to that, we also consider the following datasets:
 
+- CIFAR 10.1 v6: Small natural variations in the dataset
+- CINIC (ImageNet Fold): Distributional shift in images
+- CIFAR 10H: CIFAR Test Set but with human labels - can help us in analysing prediction structure. 
