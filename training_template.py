@@ -22,25 +22,28 @@ parser.add_argument('--gpu', default=True)
 parser.add_argument('--mode', default='teacher')
 parser.add_argument('--lr', default=0.0001, type=float)
 parser.add_argument('--lr_decay', default=0.1)
-parser.add_argument('--n_epochs', default=250)
+parser.add_argument('--n_epochs', default=150)
 parser.add_argument('--batch_size', default=128)
+parser.add_argument('--decay', default=1e-4) # Weight Decay
+parser.add_argument('--dataset', default='mnist')
 
 # Model arguments
-parser.add_argument('--teacher_model', default='resnet18')
+parser.add_argument('--teacher_model', default='alexnet')
 parser.add_argument('--student_model', default='lenet')
 parser.add_argument('--resume', default='')
 parser.add_argument('--teacher_path', default='')
 
 # VRM arguments
-parser.add_argument('--augmentation', default=False)
-parser.add_argument('--mixup', default=False)
-parser.add_argument('--alpha', default=1.0)
-parser.add_argument('--decay', default=1e-4)
 parser.add_argument('--cutout', default=False)
-parser.add_argument('--n_holes', default=1)
-parser.add_argument('--length_holes', default=16)
+parser.add_argument('--augmentation', default=True)
+parser.add_argument('--mixup', default=False)
 parser.add_argument('--cutmix', default=False)
-parser.add_argument('--cutmix_beta', default=1.0)
+
+# VRM parameters
+parser.add_argument('--alpha', default=1.0)   # Mixup Alpha
+parser.add_argument('--n_holes', default=1)   # Cutout
+parser.add_argument('--length_holes', default=16)  # Cutout
+parser.add_argument('--cutmix_beta', default=1.0)  
 parser.add_argument('--cutmix_prob', default=0.5)
 
 # Distillation arguments
@@ -48,7 +51,7 @@ parser.add_argument('--temperature', default=5.0)
 parser.add_argument('--gamma', default=0.5)
 
 # Name argument
-parser.add_argument('--name', default='resnet_baseline')
+parser.add_argument('--name', default='alexnet_augmented')
 
 def main_teacher(args):
 
@@ -61,7 +64,7 @@ def main_teacher(args):
     print("Training with CutMix: ", args.cutmix)
 
     process_num = round(time.time())
-    dir_name = args.name + '_' + str(process_num)
+    dir_name = args.name + '_' + str(process_num) + str(args.dataset)
     tb_path = "distillation_experiments/logs/%s/" % (dir_name)
     pprint(args.__dict__)
 
@@ -95,9 +98,9 @@ def main_teacher(args):
             n_holes=args.n_holes, length=args.length_holes))
 
     train_loader = dataloader.fetch_dataloader(
-        "train", train_transform, args.batch_size)
+        "train", train_transform, args.dataset, args.batch_size)
     test_loader = dataloader.fetch_dataloader(
-        "test", val_transform, args.batch_size)
+        "test", val_transform, args.dataset, args.batch_size)
 
     params = [p for p in model.parameters() if p.requires_grad]
 

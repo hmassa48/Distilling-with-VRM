@@ -48,7 +48,7 @@ def train(model, optimizer, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer,
             output_batch = model(train_batch)
 
             loss = loss_fn(output_batch, label_batch)
-            acc, _, _ = utils.find_metrics(output_batch, label_batch, use_gpu)
+            acc, _, _, _ = utils.find_metrics(output_batch, label_batch, use_gpu)
 
             losses.update(loss.item())
             accuracies.update(acc)
@@ -62,6 +62,7 @@ def train(model, optimizer, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer,
         print(("Step: {}, Current Loss: {}, RunningLoss: {}").format(
             i, loss, losses.avg))
         writer.add_scalar('data/stepwise_training_loss', losses.val, niter)
+
 
 
     writer.add_scalar('data/training_loss', losses.avg, epoch)
@@ -91,7 +92,7 @@ def validate(model, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer):
 
             loss = loss_fn(output_batch, label_batch)
 
-            acc, prec, rec = utils.find_metrics(output_batch, label_batch, use_gpu)
+            acc, prec, rec, _ = utils.find_metrics(output_batch, label_batch, use_gpu)
 
             losses.update(loss.item())
             accuracies.update(acc)
@@ -100,6 +101,7 @@ def validate(model, loss_fn, acc_fn, dataloader, use_gpu, epoch, writer):
 
             print(("Step: {}, Current Loss: {}, RunningLoss: {}").format(
                 i, loss, losses.avg))
+        
 
 
     writer.add_scalar('data/val_loss', losses.avg, epoch)

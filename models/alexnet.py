@@ -22,7 +22,7 @@ class AlexNet(nn.Module):
         )
         self.fc_layers = nn.Sequential(
             nn.Dropout(0.6),
-            nn.Linear(4096, 2048),
+            nn.Linear(2304, 2048),
             nn.ReLU(inplace=True),
             nn.Dropout(0.6),
             nn.Linear(2048, 2048),

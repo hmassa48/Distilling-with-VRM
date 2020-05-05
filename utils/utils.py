@@ -23,7 +23,7 @@ class AverageMeter(object):
         self.val = val
         self.sum = sum(self.vals)
         self.count = len(self.vals)
-        self.avg = self.sum/self.count
+        self.avg = self.sum / self.count
 
 
 def loss_fn(outputs, labels):
@@ -49,7 +49,8 @@ def accuracy(outputs, labels):
     labels = labels.detach().numpy()
     outputs = np.argmax(outputs, axis=1)
 
-    return np.sum(outputs == labels)/float(outputs.size)
+    return np.sum(outputs == labels) / float(outputs.size)
+
 
 def check_type(outputs, labels, use_gpu):
     if type(outputs) is not np.ndarray:
@@ -69,14 +70,15 @@ def check_type(outputs, labels, use_gpu):
 def find_metrics(outputs, labels, use_gpu):
     outputs, labels = check_type(outputs, labels, use_gpu)
     prec, rec, f_score, _ = precision_recall_fscore_support(
-        labels, outputs, average='weighted')
+        labels, outputs, average="weighted"
+    )
     accuracy = np.sum(outputs == labels) / float(outputs.size)
     return accuracy, prec, rec, f_score
 
 
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
-        return param_group['lr']
+        return param_group["lr"]
 
 
 def adjust_learning_rate(base_lr, optimizer, epoch, lr_decay=0.1):
@@ -95,16 +97,16 @@ def adjust_learning_rate(base_lr, optimizer, epoch, lr_decay=0.1):
     elif 60 <= epoch < 80:
         lr = base_lr * lr_decay
     elif 80 <= epoch < 120:
-        lr = base_lr * (lr_decay)**2
+        lr = base_lr * (lr_decay) ** 2
     else:
-        lr = base_lr * (lr_decay)**3
+        lr = base_lr * (lr_decay) ** 3
 
     # lr = base_lr * (0.1 ** (epoch // lr_decay))
     for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+        param_group["lr"] = lr
 
 
-def save_checkpoint(state, is_best, dir_name, filename='checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, dir_name, filename="checkpoint.pth.tar"):
     """Save model at end of each epoch and best model if found
 
     Saves state of the model at end of each epoch and the best model
@@ -126,7 +128,7 @@ def save_checkpoint(state, is_best, dir_name, filename='checkpoint.pth.tar'):
 
     if is_best:
         print("Best Model found ! ")
-        shutil.copyfile(filename, directory + '/model_best.pth.tar')
+        shutil.copyfile(filename, directory + "/model_best.pth.tar")
 
 
 def load_checkpoint(model, resume_filename):
@@ -149,21 +151,25 @@ def load_checkpoint(model, resume_filename):
         if os.path.isfile(resume_filename):
             print("=> Loading Checkpoint '{}'".format(resume_filename))
             if not torch.cuda.is_available():
-                checkpoint = torch.load(resume_filename, map_location=torch.device('cpu'))
-                start_epoch = checkpoint['epoch']
-                best_loss = checkpoint['best_loss']
-                model.load_state_dict(checkpoint['model'])
+                checkpoint = torch.load(
+                    resume_filename, map_location=torch.device("cpu")
+                )
+                start_epoch = checkpoint["epoch"]
+                best_loss = checkpoint["best_loss"]
+                model.load_state_dict(checkpoint["model"])
             else:
                 checkpoint = torch.load(resume_filename)
                 device = torch.device("cuda")
                 model.to(device)
-            
 
             print("========================================================")
 
-            print("Loaded checkpoint '{}' (epoch {})".format(
-                resume_filename, checkpoint['epoch']))
-            print("Current Loss : ", checkpoint['best_loss'])
+            print(
+                "Loaded checkpoint '{}' (epoch {})".format(
+                    resume_filename, checkpoint["epoch"]
+                )
+            )
+            print("Current Loss : ", checkpoint["best_loss"])
 
             print("========================================================")
 
@@ -218,8 +224,7 @@ def cutmix_data(x, y, beta=1.0, cutmix_prob=0.5, use_gpu=True):
 
         bbx1, bby1, bbx2, bby2 = rand_bbox(x.size(), lam)
         x[:, :, bbx1:bbx2, bby1:bby2] = x[index, :, bbx1:bbx2, bby1:bby2]
-        lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) /
-                   (x.size()[-1] * x.size()[-2]))
+        lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (x.size()[-1] * x.size()[-2]))
 
         return x, y_a, y_b, lam
 
@@ -246,9 +251,9 @@ def mixed_loss_fn(loss_fn, pred, y_a, y_b, lam):
 
 def kd_loss_fn(output, label, teacher_output, temp=1.0, gamma=1.0):
 
-    loss = nn.KLDivLoss()(F.log_softmax(output/temp, dim=1),
-                          F.softmax(teacher_output/temp, dim=1)) * (gamma * temp * temp) + \
-        F.cross_entropy(output, label) * (1 - gamma)
+    loss = nn.KLDivLoss()(
+        F.log_softmax(output / temp, dim=1), F.softmax(teacher_output / temp, dim=1)
+    ) * (gamma * temp * temp) + F.cross_entropy(output, label) * (1 - gamma)
 
     return loss
 
@@ -256,7 +261,7 @@ def kd_loss_fn(output, label, teacher_output, temp=1.0, gamma=1.0):
 def rand_bbox(size, lam):
     W = size[2]
     H = size[3]
-    cut_rat = np.sqrt(1. - lam)
+    cut_rat = np.sqrt(1.0 - lam)
     cut_w = np.int(W * cut_rat)
     cut_h = np.int(H * cut_rat)
 

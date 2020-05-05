@@ -6,22 +6,52 @@ import torchvision.transforms as transforms
 from PIL import Image
 
 
-_TRANSFORM = transforms.Compose([
+_TRANSFORM = transforms.Compose(
+    [
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),
+    ]
+)
 
-def fetch_dataloader(mode, transform, batch_size=16):
 
-    train_set = torchvision.datasets.CIFAR10(
-        root='./data/data-cifar-10', train=True, download=True, transform=transform)
-    train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=batch_size, shuffle=True)
+def fetch_dataloader(mode, transform, dataset="cifar", batch_size=16):
 
-    test_set = torchvision.datasets.CIFAR10(
-        root='./data/data-cifar-10', train=False, download=True, transform=transform)
-    test_loader = torch.utils.data.DataLoader(
-        test_set, batch_size=batch_size, shuffle=False)
+    if dataset == "cifar":
+        train_set = torchvision.datasets.CIFAR10(
+            root="./data/data-cifar-10", train=True, download=True, transform=transform
+        )
+        train_loader = torch.utils.data.DataLoader(
+            train_set, batch_size=batch_size, shuffle=True
+        )
 
+        test_set = torchvision.datasets.CIFAR10(
+            root="./data/data-cifar-10", train=False, download=True, transform=transform
+        )
+        test_loader = torch.utils.data.DataLoader(
+            test_set, batch_size=batch_size, shuffle=False
+        )
+
+    else:
+        transform = transforms.Compose(
+            [
+                transforms.Lambda(lambda image: image.convert("RGB")),
+                transforms.ToTensor(),
+                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),
+            ]
+        )
+
+        train_set = torchvision.datasets.MNIST(
+            root="./data/data-mnist", train=True, transform=transform, download=True
+        )
+        train_loader = torch.utils.data.DataLoader(
+            train_set, batch_size=batch_size, shuffle=True
+        )
+        test_set = torchvision.datasets.MNIST(
+            root="./data/data-mnist", train=False, transform=transform, download=True
+        )
+        test_loader = torch.utils.data.DataLoader(
+            test_set, batch_size=batch_size, shuffle=False
+        )
     if mode == "train":
         return train_loader
     else:
@@ -30,18 +60,18 @@ def fetch_dataloader(mode, transform, batch_size=16):
 
 class MyDataset(Dataset):
     def __init__(self, data, targets, transform=_TRANSFORM):
-        self.data = data #.transpose((0,2,3,1))
+        self.data = data  # .transpose((0,2,3,1))
         self.targets = torch.Tensor(targets)
         self.transform = transform
-    
+
     def __getitem__(self, index):
         y = self.targets[index]
-        x = self.data[index]        
+        x = self.data[index]
         if self.transform:
             x = Image.fromarray(np.uint8(x))
             x = self.transform(x)
-        
+
         return x, y
-    
+
     def __len__(self):
         return len(self.data)

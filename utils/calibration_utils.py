@@ -24,11 +24,13 @@ def CalibrationError(conf, pred, true, bin_size=0.1):
     ece = mce = 0
     accuracies = [0.0]
     thresholds = [0.0]
+    avg_confs = [0.0]
 
     for conf_thresh in upper_bounds:
         acc, avg_conf, len_bin = bin_accuracy(
             conf_thresh - bin_size, conf_thresh, conf, pred, true
         )
+        avg_confs.append(avg_conf)
         accuracies.append(acc)
         thresholds.append(conf_thresh)
         ece += (np.abs(acc - avg_conf)) * (len_bin / num_points)
@@ -38,7 +40,8 @@ def CalibrationError(conf, pred, true, bin_size=0.1):
         "MCE" : mce,
         "ECE" : ece,
         "Thresholds": thresholds,
-        "Accuracies": accuracies
+        "Accuracies": accuracies,
+        "AvgConfs": avg_confs
     }
 
     return elem
