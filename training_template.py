@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--seed', default=2)
 parser.add_argument('--gpu', default=True)
 parser.add_argument('--mode', default='teacher')
-parser.add_argument('--lr', default=0.0001, type=float)
+parser.add_argument('--lr', default=0.1, type=float)
 parser.add_argument('--lr_decay', default=0.1)
 parser.add_argument('--n_epochs', default=150)
 parser.add_argument('--batch_size', default=128)
@@ -67,6 +67,8 @@ def main_teacher(args):
     dir_name = args.name + '_' + str(process_num) + str(args.dataset)
     tb_path = "distillation_experiments/logs/%s/" % (dir_name)
     pprint(args.__dict__)
+
+    print(dir_name)
 
     writer = SummaryWriter(tb_path)
 
