@@ -198,7 +198,7 @@ def main_kd(args):
         if args.augmentation:
             train_transform = transforms.Compose([
                 transforms.RandomCrop(32, padding=4),
-                transforms.RandomHorizontalFlip(),  # randomly flip image horizontally
+                #transforms.RandomHorizontalFlip(),  # randomly flip image horizontally
                 transforms.ToTensor(),
                 transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
 
