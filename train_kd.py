@@ -70,7 +70,7 @@ def validate(model, loss_fn, dataloader, use_gpu, epoch, writer):
             output_batch = model(train_batch)
 
             loss = loss_fn(output_batch, label_batch)
-            acc, prec, rec = utils.find_metrics(output_batch, label_batch, use_gpu)
+            acc, prec, rec, f = utils.find_metrics(output_batch, label_batch, use_gpu)
 
             losses.update(loss.item())
             accuracies.update(acc)
