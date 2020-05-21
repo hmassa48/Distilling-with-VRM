@@ -22,14 +22,14 @@ parser.add_argument('--gpu', default=True)
 parser.add_argument('--mode', default='teacher')
 parser.add_argument('--lr', default=0.1, type=float)
 parser.add_argument('--lr_decay', default=0.1)
-parser.add_argument('--n_epochs', default=150)
+parser.add_argument('--n_epochs', default=218)
 parser.add_argument('--batch_size', default=128)
 parser.add_argument('--decay', default=1e-4) # Weight Decay
-parser.add_argument('--dataset', default='mnist')
+parser.add_argument('--dataset', default='cifar')
 
 # Model arguments
-parser.add_argument('--teacher_model', default='alexnet')
-parser.add_argument('--student_model', default='lenet')
+parser.add_argument('--teacher_model', default='resnet18')
+parser.add_argument('--student_model', default='alexnet')
 parser.add_argument('--resume', default='')
 parser.add_argument('--teacher_path', default='')
 
@@ -47,7 +47,7 @@ parser.add_argument('--cutmix_beta', default=1.0)
 parser.add_argument('--cutmix_prob', default=0.5)
 
 # Distillation arguments
-parser.add_argument('--temperature', default=5.0)
+parser.add_argument('--temperature', default=20.0)
 parser.add_argument('--gamma', default=0.5)
 
 # Name argument
